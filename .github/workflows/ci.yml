@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ${{ matrix.so }}
+
+    # bash nos tres sistemas: no Windows o shell padrao e o PowerShell, e ele
+    # desmonta "-Dexec.args=..." em dois argumentos antes de o Maven ver.
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Testes
+        run: mvn -B -ntp verify
+
+      - name: Todos os grafos ate cinco vertices
+        run: mvn -B -ntp -q exec:java -Dexec.args="varredura"
+
+      - name: Os dois grafos proibidos
+        run: mvn -B -ntp -q exec:java -Dexec.args="proibidos"
+
+      - name: Quem decide sem enumerar nada
+        run: mvn -B -ntp -q exec:java -Dexec.args="peneiras"
+
+      - name: Menores contra desenho
+        run: mvn -B -ntp -q exec:java -Dexec.args="juiz"
+
+      - name: Onde a planaridade morre
+        run: mvn -B -ntp -q exec:java -Dexec.args="arestas"
+
+      - name: Relatorios de teste
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-reports-${{ matrix.so }}
+          path: target/surefire-reports
+
+  fundo:
+    # 32.768 grafos de seis vertices levam 80 segundos: job proprio, fora da
+    # matriz. Ele confere as proprias medidas e quebra se alguma mudar.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      - name: Varredura com seis vertices
+        run: mvn -B -ntp -q compile exec:java -Dexec.args="fundo"
